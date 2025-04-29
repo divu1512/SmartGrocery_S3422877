@@ -1,6 +1,5 @@
 package com.example.smartgrocerylist
 
-import android.content.Intent
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -11,12 +10,9 @@ import androidx.lifecycle.ViewModelProvider
 import androidx.navigation.compose.rememberNavController
 import com.example.smartgrocerylist.data.database.GroceryDatabase
 import com.example.smartgrocerylist.navigation.NavGraph
-import com.example.smartgrocerylist.ui.screens.LoginActivity
 import com.example.smartgrocerylist.ui.theme.SmartGroceryListTheme
 import com.example.smartgrocerylist.viewmodel.GroceryViewModel
 import com.example.smartgrocerylist.viewmodel.GroceryViewModelFactory
-import com.google.firebase.FirebaseApp
-import com.google.firebase.auth.FirebaseAuth
 
 class MainActivity : ComponentActivity() {
 
@@ -24,9 +20,6 @@ class MainActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-
-        // Initialize Firebase
-        FirebaseApp.initializeApp(this)
 
         // Initialize Room Database and GroceryDao
         val database = GroceryDatabase.getDatabase(this)
@@ -36,12 +29,7 @@ class MainActivity : ComponentActivity() {
         val factory = GroceryViewModelFactory(groceryDao)
         viewModel = ViewModelProvider(this, factory)[GroceryViewModel::class.java]
 
-        // Check if a user is logged in; if not redirect to LoginActivity
-        val user = FirebaseAuth.getInstance().currentUser
-        if (user == null) {
-            startActivity(Intent(this, LoginActivity::class.java))
-            finish()
-        } else setContent {
+        setContent {
             SmartGroceryListTheme {
                 Surface(color = MaterialTheme.colorScheme.background) {
                     GroceryApp(viewModel = viewModel)
@@ -54,5 +42,5 @@ class MainActivity : ComponentActivity() {
 @Composable
 fun GroceryApp(viewModel: GroceryViewModel) {
     val navController = rememberNavController()
-    NavGraph(navController = navController, viewModel = viewModel)
+    NavGraph(navController = navController, viewModel = viewModel) // <-- Fixed Parameter Name
 }

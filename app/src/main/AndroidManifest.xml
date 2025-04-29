@@ -31,10 +31,6 @@
             </intent-filter>
         </activity>
 
-        <activity android:name=".ui.screens.LoginActivity"/>
-        <activity android:name=".ui.screens.SignUpActivity"/>
-        <activity android:name=".ui.screens.ForgotPasswordActivity"/>
-
     </application>
 
 </manifest>

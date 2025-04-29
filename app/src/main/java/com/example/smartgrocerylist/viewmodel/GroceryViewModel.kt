@@ -15,10 +15,6 @@ class GroceryViewModel(private val groceryDao: GroceryDao) : ViewModel() {
     private val _groceryList = MutableLiveData<List<GroceryItem>>()
     val groceryList: LiveData<List<GroceryItem>> = _groceryList
 
-    init {
-        fetchAllItems()
-    }
-
     private fun fetchAllItems() {
         viewModelScope.launch(Dispatchers.IO) {
             groceryDao.getAllItems().collect { items ->
@@ -37,13 +33,6 @@ class GroceryViewModel(private val groceryDao: GroceryDao) : ViewModel() {
     fun deleteItem(id: Int) {
         viewModelScope.launch(Dispatchers.IO) {
             groceryDao.deleteItem(id)
-            fetchAllItems()
-        }
-    }
-
-    fun updateItem(groceryItem: GroceryItem) {
-        viewModelScope.launch(Dispatchers.IO) {
-            groceryDao.updateItem(groceryItem)
             fetchAllItems()
         }
     }
@@ -67,9 +56,7 @@ class GroceryViewModel(private val groceryDao: GroceryDao) : ViewModel() {
     fun searchProductByName(productName: String, onResult: (SearchResponse?) -> Unit) {
         viewModelScope.launch(Dispatchers.IO) {
             try {
-                val response: Response<SearchResponse> = RetrofitInstance.api.searchProductByName(
-                    productName = productName
-                )
+                val response: Response<SearchResponse> = RetrofitInstance.api.searchProductByName(productName)
                 if (response.isSuccessful) {
                     onResult(response.body())
                 } else {

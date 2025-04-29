@@ -13,6 +13,5 @@ data class GroceryItem(
     val quantity: Int = 1,
     val barcode: String = "",
     val brand: String = "",
-    val category: String = "",
-    val expirationDate: String? = null
+    val category: String = ""
 )

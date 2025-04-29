@@ -9,7 +9,7 @@ import retrofit2.http.Query
 
 interface OpenFoodFactsApi {
 
-    @GET("product/{barcode}.json")
+    @GET("product/{barcode}")
     suspend fun getProductByBarcode(
         @Path("barcode") barcode: String,
         @Query("fields") fields: String = "product_name,nutrition_grades,nutriments"
@@ -18,13 +18,11 @@ interface OpenFoodFactsApi {
     @GET("search")
     suspend fun searchProductByName(
         @Query("search_terms") productName: String,
-        @Query("search_simple") searchSimple: Int = 1,
-        @Query("json") json: Int = 1,
         @Query("fields") fields: String = "product_name,nutrition_grades,nutriments",
-        @Query("page_size") pageSize: Int = 1000
+        @Query("page_size") pageSize: Int = 10
     ): Response<SearchResponse>
 
     companion object {
-        const val BASE_URL = "https://world.openfoodfacts.org/api/v2/"
+        const val BASE_URL = "https://world.openfoodfacts.net/api/v2/"
     }
 }
