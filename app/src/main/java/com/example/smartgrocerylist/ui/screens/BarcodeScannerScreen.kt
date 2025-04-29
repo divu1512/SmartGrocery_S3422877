@@ -75,14 +75,12 @@ fun BarcodeScannerScreen(
         }
     )
 
-    // Ask permission on first load
     LaunchedEffect(Unit) {
         if (!hasCameraPermission) {
             permissionLauncher.launch(Manifest.permission.CAMERA)
         }
     }
 
-    // Show snackbar when message is set
     LaunchedEffect(snackbarMessage) {
         snackbarMessage?.let {
             snackbarHostState.showSnackbar(it)
