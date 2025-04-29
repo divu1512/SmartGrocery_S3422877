@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "781720650796",
+    "project_id": "smart-grocery-app-7d913",
+    "storage_bucket": "smart-grocery-app-7d913.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:781720650796:android:b229c91e6dedb75193fd89",
+        "android_client_info": {
+          "package_name": "com.example.smartgrocerylist"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBB5zbFMegeiUI3716tYofdsaYel9jxsRg"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

@@ -5,6 +5,7 @@ import com.example.smartgrocerylist.data.api.RetrofitInstance
 import com.example.smartgrocerylist.data.database.GroceryDao
 import com.example.smartgrocerylist.data.database.GroceryItem
 import com.example.smartgrocerylist.data.model.ProductResponse
+import com.example.smartgrocerylist.data.model.SearchResponse
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import retrofit2.Response
@@ -13,6 +14,10 @@ class GroceryViewModel(private val groceryDao: GroceryDao) : ViewModel() {
 
     private val _groceryList = MutableLiveData<List<GroceryItem>>()
     val groceryList: LiveData<List<GroceryItem>> = _groceryList
+
+    init {
+        fetchAllItems()
+    }
 
     private fun fetchAllItems() {
         viewModelScope.launch(Dispatchers.IO) {
@@ -36,6 +41,13 @@ class GroceryViewModel(private val groceryDao: GroceryDao) : ViewModel() {
         }
     }
 
+    fun updateItem(groceryItem: GroceryItem) {
+        viewModelScope.launch(Dispatchers.IO) {
+            groceryDao.updateItem(groceryItem)
+            fetchAllItems()
+        }
+    }
+
     fun fetchProduct(barcode: String, onResult: (ProductResponse?) -> Unit) {
         viewModelScope.launch(Dispatchers.IO) {
             try {
@@ -51,46 +63,22 @@ class GroceryViewModel(private val groceryDao: GroceryDao) : ViewModel() {
             }
         }
     }
+
+    fun searchProductByName(productName: String, onResult: (SearchResponse?) -> Unit) {
+        viewModelScope.launch(Dispatchers.IO) {
+            try {
+                val response: Response<SearchResponse> = RetrofitInstance.api.searchProductByName(
+                    productName = productName
+                )
+                if (response.isSuccessful) {
+                    onResult(response.body())
+                } else {
+                    onResult(null)
+                }
+            } catch (e: Exception) {
+                e.printStackTrace()
+                onResult(null)
+            }
+        }
+    }
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-//package com.example.smartgrocerylist.viewmodel
-//
-//import androidx.lifecycle.ViewModel
-//import androidx.lifecycle.viewModelScope
-//import com.example.smartgrocerylist.data.api.RetrofitInstance
-//import com.example.smartgrocerylist.data.model.ProductResponse
-//import kotlinx.coroutines.Dispatchers
-//import kotlinx.coroutines.launch
-//import retrofit2.Response
-//
-//class GroceryViewModel : ViewModel() {
-//
-//    fun fetchProduct(barcode: String, onResult: (ProductResponse?) -> Unit) {
-//        viewModelScope.launch(Dispatchers.IO) {
-//            try {
-//                val response: Response<ProductResponse> = RetrofitInstance.api.getProductByBarcode(barcode)
-//                if (response.isSuccessful) {
-//                    onResult(response.body())
-//                } else {
-//                    onResult(null)
-//                }
-//            } catch (e: Exception) {
-//                e.printStackTrace()
-//                onResult(null)
-//            }
-//        }
-//    }
-//}

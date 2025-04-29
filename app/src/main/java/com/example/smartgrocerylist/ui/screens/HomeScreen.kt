@@ -1,258 +1,233 @@
 package com.example.smartgrocerylist.ui.screens
 
+import android.content.Intent
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.List
+import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
-import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.example.smartgrocerylist.data.database.GroceryItem
+import androidx.navigation.NavController
+import com.example.smartgrocerylist.data.model.Product
 import com.example.smartgrocerylist.data.model.ProductResponse
+import com.example.smartgrocerylist.navigation.Screen
 import com.example.smartgrocerylist.viewmodel.GroceryViewModel
+import com.google.firebase.auth.FirebaseAuth
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun HomeScreen(
     viewModel: GroceryViewModel = viewModel(),
+    navController: NavController,
     onNavigateToAddItem: () -> Unit
 ) {
-    var barcode by remember { mutableStateOf(TextFieldValue("")) }
+    val context = LocalContext.current
+
+    var searchInput by remember { mutableStateOf(TextFieldValue("")) }
     var productResponse by remember { mutableStateOf<ProductResponse?>(null) }
+    var productList by remember { mutableStateOf<List<Product>>(emptyList()) }
     var isLoading by remember { mutableStateOf(false) }
     var errorMessage by remember { mutableStateOf("") }
-    val groceryList by viewModel.groceryList.observeAsState(emptyList())  // Observe grocery list
+    var showMenu by remember { mutableStateOf(false) }
 
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(16.dp),
-        verticalArrangement = Arrangement.Top,
-        horizontalAlignment = Alignment.CenterHorizontally
-    ) {
-        TextField(
-            value = barcode,
-            onValueChange = { barcode = it },
-            label = { Text("Enter Barcode") },
-            modifier = Modifier.fillMaxWidth()
-        )
+    val savedStateHandle = navController.currentBackStackEntry?.savedStateHandle
+    val scannedBarcode = savedStateHandle?.get<String>("scanned_barcode")
 
-        Spacer(modifier = Modifier.height(16.dp))
+    LaunchedEffect(scannedBarcode) {
+        scannedBarcode?.let {
+            searchInput = TextFieldValue(it)
+            performSearch(
+                viewModel = viewModel,
+                input = it,
+                productResponseSetter = { value -> productResponse = value },
+                productListSetter = { value -> productList = value },
+                isLoadingSetter = { value -> isLoading = value },
+                errorMessageSetter = { value -> errorMessage = value }
+            )
+            savedStateHandle.remove<String>("scanned_barcode")
+        }
+    }
 
-        Button(
-            onClick = {
-                isLoading = true
-                errorMessage = ""
-                viewModel.fetchProduct(barcode.text) { response ->
-                    productResponse = response
-                    isLoading = false
+    Scaffold(
+        topBar = {
+            TopAppBar(
+                title = { Text("\n" +
+                        "\uD83D\uDED2 Smart Grocery \uD83D\uDECD\uFE0F", fontSize = 27.sp) },
+                actions = {
+                    IconButton(onClick = { showMenu = !showMenu }) {
+                        Icon(Icons.Default.Menu, contentDescription = "Menu")
+                    }
 
-                    if (response == null || response.status == 0) {
-                        errorMessage = "Product not found. Please try another barcode."
+                    DropdownMenu(
+                        expanded = showMenu,
+                        onDismissRequest = { showMenu = false }
+                    ) {
+                        DropdownMenuItem(
+                            text = { Text("Logout") },
+                            onClick = {
+                                FirebaseAuth.getInstance().signOut()
+                                showMenu = false
+                                context.startActivity(Intent(context, LoginActivity::class.java))
+                            }
+                        )
                     }
                 }
-            },
-            modifier = Modifier.fillMaxWidth()
-        ) {
-            Text(text = "Search Product")
-        }
+            )
+        },
+        floatingActionButton = {
+            Column(
+                verticalArrangement = Arrangement.spacedBy(12.dp),
+                horizontalAlignment = Alignment.End
+            ) {
+                FloatingActionButton(
+                    onClick = { navController.navigate(Screen.GroceryItem.route) },
+                    containerColor = MaterialTheme.colorScheme.secondaryContainer,
+                    contentColor = MaterialTheme.colorScheme.onSecondaryContainer,
+                    shape = RoundedCornerShape(20.dp)
+                ) {
+                    Icon(Icons.AutoMirrored.Filled.List, contentDescription = "View Grocery Items")
+                }
 
-        Spacer(modifier = Modifier.height(16.dp))
-
-        if (isLoading) {
-            CircularProgressIndicator()
-        }
-
-        productResponse?.let { response ->
-            if (response.status == 1 && response.product != null) {
-                ProductInfoCard(response)
+                FloatingActionButton(
+                    onClick = onNavigateToAddItem,
+                    containerColor = MaterialTheme.colorScheme.primaryContainer,
+                    contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
+                    shape = RoundedCornerShape(20.dp)
+                ) {
+                    Icon(Icons.Default.Add, contentDescription = "Add Item")
+                }
             }
         }
-
-        if (errorMessage.isNotEmpty()) {
-            Text(text = errorMessage, color = MaterialTheme.colorScheme.error)
-        }
-
-        Spacer(modifier = Modifier.height(16.dp))
-
-        Text(text = "Grocery List", style = MaterialTheme.typography.headlineMedium)
-
-        Spacer(modifier = Modifier.height(8.dp))
-
-        groceryList.forEach { item ->
-            GroceryItemRow(item = item, viewModel = viewModel)
-        }
-
-        Spacer(modifier = Modifier.height(32.dp))
-
-        Button(
-            onClick = onNavigateToAddItem,
-            modifier = Modifier.fillMaxWidth()
-        ) {
-            Text(text = "Go to Add Item Screen")
-        }
-    }
-}
-
-@Composable
-fun ProductInfoCard(response: ProductResponse) {
-    val product = response.product
-
-    Card(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(8.dp)
-    ) {
+    ) { innerPadding ->
         Column(
-            modifier = Modifier.padding(16.dp)
+            modifier = Modifier
+                .padding(innerPadding)
+                .padding(16.dp)
+                .fillMaxSize()
+                .verticalScroll(rememberScrollState())
         ) {
-            Text(text = "Product Name: ${product?.productName ?: "Unknown"}")
-            Text(text = "Nutrition Grade: ${product?.nutritionGrades ?: "N/A"}")
-            Text(text = "Carbohydrates: ${product?.nutriments?.carbohydrates ?: 0f}g")
-            Text(text = "Sugars: ${product?.nutriments?.sugars ?: 0f}g")
-            Text(text = "Energy: ${product?.nutriments?.energy ?: 0f} kcal")
+            OutlinedTextField(
+                value = searchInput,
+                onValueChange = { searchInput = it },
+                label = { Text("Enter Product Name or Barcode to see details") },
+                modifier = Modifier.fillMaxWidth()
+            )
+
+            Spacer(modifier = Modifier.height(12.dp))
+
+            Button(
+                onClick = {
+                    performSearch(
+                        viewModel = viewModel,
+                        input = searchInput.text,
+                        productResponseSetter = { value -> productResponse = value },
+                        productListSetter = { value -> productList = value },
+                        isLoadingSetter = { value -> isLoading = value },
+                        errorMessageSetter = { value -> errorMessage = value }
+                    )
+                },
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Text("Search")
+            }
+
+            Spacer(modifier = Modifier.height(10.dp))
+
+            OutlinedButton(
+                onClick = { navController.navigate(Screen.BarcodeScanner.route) },
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Text("Scan Barcode with Camera")
+            }
+
+            Spacer(modifier = Modifier.height(12.dp))
+
+            if (isLoading) {
+                CircularProgressIndicator(modifier = Modifier.align(Alignment.CenterHorizontally))
+            }
+
+            AnimatedVisibility(visible = errorMessage.isNotEmpty()) {
+                Text(
+                    text = errorMessage,
+                    color = MaterialTheme.colorScheme.error,
+                    modifier = Modifier.padding(vertical = 8.dp)
+                )
+            }
+
+            productResponse?.let { response ->
+                if (response.status == 1 && response.product != null) {
+                    ProductInfoCard(response)
+                    Spacer(modifier = Modifier.height(8.dp))
+                }
+            }
+
+            if (productList.isNotEmpty()) {
+                Text("Search Results", style = MaterialTheme.typography.titleMedium)
+                productList.forEach { product ->
+                    ProductItemCard(product = product)
+                    Spacer(modifier = Modifier.height(8.dp))
+                }
+            }
+
+            Spacer(modifier = Modifier.height(20.dp))
         }
     }
 }
 
-@Composable
-fun GroceryItemRow(item: GroceryItem, viewModel: GroceryViewModel) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(vertical = 4.dp),
-        horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Text(text = item.name)
-
-        Button(onClick = { viewModel.deleteItem(item.id) }) {
-            Text(text = "Delete")
+private fun performSearch(
+    viewModel: GroceryViewModel,
+    input: String,
+    productResponseSetter: (ProductResponse?) -> Unit,
+    productListSetter: (List<Product>) -> Unit,
+    isLoadingSetter: (Boolean) -> Unit,
+    errorMessageSetter: (String) -> Unit
+) {
+    isLoadingSetter(true)
+    errorMessageSetter("")
+    if (input.all { it.isDigit() }) {
+        // Search by Barcode
+        viewModel.fetchProduct(input) { response ->
+            isLoadingSetter(false)
+            if (response == null || response.status == 0) {
+                errorMessageSetter("Product not found.")
+                productResponseSetter(null)
+                productListSetter(emptyList())
+            } else {
+                productResponseSetter(response)
+                productListSetter(emptyList())
+            }
+        }
+    } else {
+        // Search by Name
+        viewModel.searchProductByName(input) { response ->
+            isLoadingSetter(false)
+            if (response != null && response.products.isNotEmpty()) {
+                val filteredProducts = response.products.filter { product ->
+                    product.productName.equals(input, ignoreCase = true) || product.productName?.contains(input, ignoreCase = true) == true
+                }
+                if (filteredProducts.isNotEmpty()) {
+                    productListSetter(filteredProducts)
+                    productResponseSetter(null)
+                } else {
+                    errorMessageSetter("No matching products found.")
+                    productListSetter(emptyList())
+                }
+            } else {
+                errorMessageSetter("No products found.")
+                productListSetter(emptyList())
+            }
         }
     }
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-//package com.example.smartgrocerylist.ui.screens
-//
-//import androidx.compose.foundation.layout.*
-//import androidx.compose.material3.*
-//import androidx.compose.runtime.*
-//import androidx.compose.ui.Alignment
-//import androidx.compose.ui.Modifier
-//import androidx.compose.ui.text.input.TextFieldValue
-//import androidx.compose.ui.unit.dp
-//import androidx.lifecycle.viewmodel.compose.viewModel
-//import com.example.smartgrocerylist.data.model.ProductResponse
-//import com.example.smartgrocerylist.viewmodel.GroceryViewModel
-//
-//@Composable
-//fun HomeScreen(
-//    viewModel: GroceryViewModel = viewModel(),
-//    onNavigateToAddItem: () -> Unit
-//) {
-//    var barcode by remember { mutableStateOf(TextFieldValue("")) }
-//    var productResponse by remember { mutableStateOf<ProductResponse?>(null) }
-//    var isLoading by remember { mutableStateOf(false) }
-//    var errorMessage by remember { mutableStateOf("") }
-//
-//    Column(
-//        modifier = Modifier
-//            .fillMaxSize()
-//            .padding(16.dp),
-//        verticalArrangement = Arrangement.Top,
-//        horizontalAlignment = Alignment.CenterHorizontally
-//    ) {
-//        TextField(
-//            value = barcode,
-//            onValueChange = { barcode = it },
-//            label = { Text("Enter Barcode") },
-//            modifier = Modifier.fillMaxWidth()
-//        )
-//
-//        Spacer(modifier = Modifier.height(16.dp))
-//
-//        Button(
-//            onClick = {
-//                isLoading = true
-//                errorMessage = ""
-//                viewModel.fetchProduct(barcode.text) { response ->
-//                    productResponse = response
-//                    isLoading = false
-//
-//                    if (response == null || response.status == 0) {
-//                        errorMessage = "Product not found. Please try another barcode."
-//                    }
-//                }
-//            },
-//            modifier = Modifier.fillMaxWidth()
-//        ) {
-//            Text(text = "Search Product")
-//        }
-//
-//        Spacer(modifier = Modifier.height(16.dp))
-//
-//        if (isLoading) {
-//            CircularProgressIndicator()
-//        }
-//
-//        productResponse?.let { response ->
-//            if (response.status == 1 && response.product != null) {
-//                ProductInfoCard(response)
-//            }
-//        }
-//
-//        if (errorMessage.isNotEmpty()) {
-//            Text(text = errorMessage, color = MaterialTheme.colorScheme.error)
-//        }
-//
-//        Spacer(modifier = Modifier.height(32.dp))
-//
-//        Button(
-//            onClick = onNavigateToAddItem,
-//            modifier = Modifier.fillMaxWidth()
-//        ) {
-//            Text(text = "Go to Add Item Screen")
-//        }
-//    }
-//}
-//
-//@Composable
-//fun ProductInfoCard(response: ProductResponse) {
-//    val product = response.product
-//
-//    Card(
-//        modifier = Modifier
-//            .fillMaxWidth()
-//            .padding(8.dp)
-//    ) {
-//        Column(
-//            modifier = Modifier.padding(16.dp)
-//        ) {
-//            Text(text = "Product Name: ${product?.productName ?: "Unknown"}")
-//            Text(text = "Nutrition Grade: ${product?.nutritionGrades ?: "N/A"}")
-//            Text(text = "Carbohydrates: ${product?.nutriments?.carbohydrates ?: 0f}g")
-//            Text(text = "Sugars: ${product?.nutriments?.sugars ?: 0f}g")
-//            Text(text = "Energy: ${product?.nutriments?.energy ?: 0f} kcal")
-//        }
-//    }
-//}

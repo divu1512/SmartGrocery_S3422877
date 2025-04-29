@@ -10,9 +10,11 @@ data class ProductResponse(
 )
 
 data class Product(
+    @SerializedName("_id") val id: String,
     @SerializedName("product_name") val productName: String?,
     @SerializedName("nutrition_grades") val nutritionGrades: String?,
-    @SerializedName("nutriments") val nutriments: Nutriments?
+    @SerializedName("nutriments") val nutriments: Nutriments?,
+    @SerializedName("barcode") val barcode: String?
 )
 
 data class Nutriments(
